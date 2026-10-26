@@ -2,7 +2,7 @@
 // @name         HLTV 中文汉化 + 去广告 - HLTV.org 简体中文翻译（菜单 + 新闻论坛机翻）
 // @name:en      HLTV Chinese + AdBlock - Simplified Chinese translation for HLTV.org
 // @namespace    https://github.com/CamarilloG/hltv-zh
-// @version      0.3.0
+// @version      0.3.1
 // @description  HLTV.org 中文版：菜单、标签、按钮、地区国家、日期时间全部汉化，新闻标题、正文、论坛帖子用必应翻译自动机翻；战队、选手、赛事名与 CS2 术语（Major、IGL、VRS、Rating）保留英文；顺带清除博彩广告、赔率、赞助横幅与导航「博彩」菜单。机翻与去广告都可在油猴菜单一键开关
 // @description:en Translate HLTV.org into Simplified Chinese: menus, tabs, countries, dates, plus Bing machine translation for news and forum posts. Team, player and event names and CS2 terms stay in English. Also removes betting ads, odds and sponsor banners.
 // @author       CamarilloG
@@ -994,10 +994,15 @@
     hideAdShells(document);
     new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && hideAdShells(n.parentElement || n))))
       .observe(document.body, { childList: true, subtree: true });
-    // 整页背景广告会把 body 变成可点击的跳转链接。
-    const unlinkBody = () => document.body.removeAttribute('data-href');
-    unlinkBody();
-    new MutationObserver(unlinkBody).observe(document.body, { attributes: true, attributeFilter: ['data-href'] });
+    // 整页背景广告写在 body 的 style 属性里且带 !important（样式表压不过），并用 data-href 把 body 变成跳转链接。
+    const BG_PROPS = ['background', 'background-image', 'background-color', 'background-repeat', 'background-position', 'background-attachment', 'background-size'];
+    const cleanBody = () => {
+      const b = document.body;
+      if (b.hasAttribute('data-href')) b.removeAttribute('data-href');
+      if (BG_PROPS.some((p) => b.style.getPropertyValue(p))) BG_PROPS.forEach((p) => b.style.removeProperty(p));
+    };
+    cleanBody();
+    new MutationObserver(cleanBody).observe(document.body, { attributes: true, attributeFilter: ['data-href', 'style'] });
   }
 
   walk(document.body);
