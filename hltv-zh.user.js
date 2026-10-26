@@ -2,7 +2,7 @@
 // @name         HLTV 中文汉化 + 去广告 - HLTV.org 简体中文翻译（菜单 + 新闻论坛机翻）
 // @name:en      HLTV Chinese + AdBlock - Simplified Chinese translation for HLTV.org
 // @namespace    https://github.com/CamarilloG/hltv-zh
-// @version      0.3.2
+// @version      0.3.3
 // @description  HLTV.org 中文版：菜单、标签、按钮、地区国家、日期时间全部汉化，新闻标题、正文、论坛帖子用必应翻译自动机翻；战队、选手、赛事名与 CS2 术语（Major、IGL、VRS、Rating）保留英文；顺带清除博彩广告、赔率、赞助横幅与导航「博彩」菜单。机翻与去广告都可在油猴菜单一键开关
 // @description:en Translate HLTV.org into Simplified Chinese: menus, tabs, countries, dates, plus Bing machine translation for news and forum posts. Team, player and event names and CS2 terms stay in English. Also removes betting ads, odds and sponsor banners.
 // @author       CamarilloG
@@ -837,6 +837,9 @@ function hltvZhMain() {
     '.fragment-content > p', '.forum-middle', '.forum-topbar > .topic', '.activity .topic',
     'td.name > a[href^="/forums/threads/"]', '.standard-headline > a[href^="/forums/threads/"]',
     '.faq-answer > span', '.brainbriefing-item', '.brainbriefing-block-heading:not(a)','.video-discription-text > span', '.veto-box .preformatted-text',
+    // 直播更新类文章：头部标题与导语、要点链接、每条更新的标题、文中「延伸阅读」卡片标题
+    '.news-with-frag-head-container h1', '.news-with-frag-head-container .summary-header', 'a.news-summary-headlines-link',
+    'a.fragment-headline', '.news-read-more-1-bottom', 'button.show-fragment-comments',
   ].join(', ');
 
   const gmGet = (k, d) => (typeof GM_getValue === 'function' ? GM_getValue(k, d) : d);
