@@ -4,7 +4,8 @@
 
 **看 CS2 新闻再也不用开翻译插件逐段复制 —— 装上就是中文 HLTV，菜单、新闻、论坛、比赛页全汉化**
 
-[![Greasy Fork](https://img.shields.io/badge/Greasy%20Fork-一键安装-red?logo=greasyfork)](#-30-秒装好)
+[![Greasy Fork](https://img.shields.io/badge/Greasy%20Fork-一键安装-red?logo=greasyfork)](https://greasyfork.org/zh-CN/scripts/602378)
+[![Greasy Fork 安装量](https://img.shields.io/greasyfork/dt/602378?label=安装量)](https://greasyfork.org/zh-CN/scripts/602378)
 [![Tampermonkey](https://img.shields.io/badge/Tampermonkey-userscript-00485B?logo=tampermonkey)](https://www.tampermonkey.net/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![CS2](https://img.shields.io/badge/CS2-HLTV%20中文-orange)
@@ -51,7 +52,7 @@
 
 1. 浏览器装一个用户脚本管理器：[Tampermonkey（油猴）](https://www.tampermonkey.net/)、Violentmonkey 或 ScriptCat 都行。
 2. 点这里安装脚本：
-   - **Greasy Fork**：发布中，上架后链接会放在这里
+   - **Greasy Fork（推荐，自动更新）**：[HLTV 中文汉化](https://greasyfork.org/zh-CN/scripts/602378)
    - **GitHub 直装**：[hltv-zh.user.js](https://github.com/CamarilloG/hltv-zh/raw/main/hltv-zh.user.js)
 3. 打开 [hltv.org](https://www.hltv.org/)，第一次机翻时油猴会询问是否允许访问 `www.bing.com`，点「总是允许」。
 
