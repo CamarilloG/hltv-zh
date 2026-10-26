@@ -2,7 +2,7 @@
 // @name         HLTV 中文汉化 + 去广告 - HLTV.org 简体中文翻译（菜单 + 新闻论坛机翻）
 // @name:en      HLTV Chinese + AdBlock - Simplified Chinese translation for HLTV.org
 // @namespace    https://github.com/CamarilloG/hltv-zh
-// @version      0.3.1
+// @version      0.3.2
 // @description  HLTV.org 中文版：菜单、标签、按钮、地区国家、日期时间全部汉化，新闻标题、正文、论坛帖子用必应翻译自动机翻；战队、选手、赛事名与 CS2 术语（Major、IGL、VRS、Rating）保留英文；顺带清除博彩广告、赔率、赞助横幅与导航「博彩」菜单。机翻与去广告都可在油猴菜单一键开关
 // @description:en Translate HLTV.org into Simplified Chinese: menus, tabs, countries, dates, plus Bing machine translation for news and forum posts. Team, player and event names and CS2 terms stay in English. Also removes betting ads, odds and sponsor banners.
 // @author       CamarilloG
@@ -11,7 +11,7 @@
 // @supportURL   https://github.com/CamarilloG/hltv-zh/issues
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hltv.org
 // @match        https://www.hltv.org/*
-// @run-at       document-end
+// @run-at       document-start
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -19,7 +19,88 @@
 // @connect      www.bing.com
 // ==/UserScript==
 
+// —— 去广告：博彩广告框、整页背景广告、赔率、赞助横幅与赞助外链、导航「博彩」菜单（页脚不动） ——
+// 在 document-start 运行：body 一出现就清掉整页背景广告，赶在首次绘制和 HLTV 绑定背景点击跳转之前，
+// 否则切换、刷新页面时广告会闪一下，点两侧还会弹出空白页。
 (function () {
+  'use strict';
+
+  const AD_ON = typeof GM_getValue === 'function' ? GM_getValue('adblock', true) : true;
+  if (typeof GM_registerMenuCommand === 'function') {
+    GM_registerMenuCommand(`去广告：${AD_ON ? '已开启（点击关闭）' : '已关闭（点击开启）'}`, () => {
+      if (typeof GM_setValue === 'function') GM_setValue('adblock', !AD_ON);
+      location.reload();
+    });
+  }
+  if (!AD_ON) return;
+
+  // 图片广告都是 <a rel="nofollow" href="/out2/…"><img></a>，外层 div 类名是随机串，所以按链接特征识别；
+  // 直播源、论坛外链直接指向目标站，不经过 /out2，不受影响。
+  // :has() 不能嵌套，规则要分开写：一条选择器不合法时浏览器会丢掉整条规则。
+  const AD_LINK = 'a[rel~="nofollow"][href*="/out2/"]';
+  const AD_CSS = [
+    '.bg-sidebar', '.mobiletop.centered-placement',
+    '.yabo-firstcol-box', '.world-ranking-banner', '.presented-by-row',
+    '#betting', '.betting-section', '.match-fixtures',
+    `${AD_LINK}:has(> img):not(footer *)`,
+    '.navcon .nav-item:has(> a.nav-link[href*="/betting"])',
+  ];
+  const style = document.createElement('style');
+  style.textContent = AD_CSS.map((sel) => `${sel} { display: none !important; }`).join('\n')
+    + '\nbody { background-image: none !important; cursor: auto !important; }';
+
+  // 整页背景广告写在 body 的 style 属性里且带 !important（样式表压不过），并用 data-href 把 body 变成跳转链接。
+  const BG_PROPS = ['background', 'background-image', 'background-color', 'background-repeat', 'background-position', 'background-attachment', 'background-size'];
+  let hadBgAd = false;
+  const cleanBody = () => {
+    const b = document.body;
+    if (b.hasAttribute('data-href')) { b.removeAttribute('data-href'); hadBgAd = true; }
+    if (BG_PROPS.some((p) => b.style.getPropertyValue(p))) BG_PROPS.forEach((p) => b.style.removeProperty(p));
+  };
+  // HLTV 的 installAds 在加载时看 body 有没有 data-href，有就绑 mousedown/mouseup，松开时 window.open(body.dataset.href)。
+  // 正常情况下我们抢在它之前删掉 data-href；万一晚了，在捕获阶段拦下直接点在 body 空白处的鼠标事件。
+  ['mousedown', 'mouseup', 'click'].forEach((type) => window.addEventListener(type, (e) => {
+    if (hadBgAd && e.target === document.body) e.stopImmediatePropagation();
+  }, true));
+
+  // 图片广告外层套着一个类名随机的 div，只装着广告链接；链接藏掉后把这层空壳也藏掉，免得留白。
+  const hideShell = (img) => {
+    const shell = img.parentElement && img.parentElement.parentElement;
+    if (shell && shell.tagName === 'DIV' && !shell.closest('footer')
+      && [...shell.children].every((c) => c.matches(AD_LINK))) shell.style.setProperty('display', 'none', 'important');
+  };
+  const hideAdShells = (node) => {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (node.matches(`${AD_LINK} > img`)) hideShell(node);
+    node.querySelectorAll(`${AD_LINK} > img`).forEach(hideShell);
+  };
+
+  // document-start 时 <html>、<body> 可能都还没建出来，等它们出现再动手。
+  let styled = false;
+  const onBody = () => {
+    cleanBody();
+    new MutationObserver(cleanBody).observe(document.body, { attributes: true, attributeFilter: ['data-href', 'style'] });
+    new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach(hideAdShells)))
+      .observe(document.body, { childList: true, subtree: true });
+    hideAdShells(document.body);
+  };
+  const tryStart = () => {
+    if (!styled && document.documentElement) {
+      document.documentElement.appendChild(style);
+      styled = true;
+    }
+    if (!document.body) return false;
+    onBody();
+    return true;
+  };
+  if (!tryStart()) {
+    const mo = new MutationObserver(() => { if (tryStart()) mo.disconnect(); });
+    mo.observe(document, { childList: true, subtree: true });
+  }
+})();
+
+// —— 翻译：页面解析完再跑 ——
+function hltvZhMain() {
   'use strict';
 
   // 精确匹配词表：键为去掉首尾空白后的原文（区分大小写的版本会先查，查不到再按小写查）。
@@ -959,52 +1040,6 @@
     if (MT_ON && MT_AVAILABLE) pick(MT_TARGETS).forEach(mtEnqueue);
   }
 
-  // —— 去广告：博彩广告框、侧边背景广告、赔率、赞助横幅与赞助外链、导航「博彩」菜单（页脚不动） ——
-  // 图片广告都是 <a rel="nofollow" href="/out2/…"><img></a>，外层 div 类名是随机串，所以按链接特征识别；
-  // 直播源、论坛外链直接指向目标站，不经过 /out2，不受影响。
-  const AD_ON = gmGet('adblock', true);
-  if (typeof GM_registerMenuCommand === 'function') {
-    GM_registerMenuCommand(`去广告：${AD_ON ? '已开启（点击关闭）' : '已关闭（点击开启）'}`, () => {
-      gmSet('adblock', !AD_ON);
-      location.reload();
-    });
-  }
-  if (AD_ON) {
-    // :has() 不能嵌套，规则要分开写：一条选择器不合法时浏览器会丢掉整条规则。
-    const AD_CSS = [
-      '.bg-sidebar', '.mobiletop.centered-placement',
-      '.yabo-firstcol-box', '.world-ranking-banner', '.presented-by-row',
-      '#betting', '.betting-section', '.match-fixtures',
-      'a[rel~="nofollow"][href*="/out2/"]:has(> img):not(footer *)',
-      '.navcon .nav-item:has(> a.nav-link[href*="/betting"])',
-    ];
-    const style = document.createElement('style');
-    style.textContent = AD_CSS.map((sel) => `${sel} { display: none !important; }`).join('\n')
-      + '\nbody { background-image: none !important; cursor: auto !important; }';
-    (document.head || document.documentElement).appendChild(style);
-    // 图片广告外层套着一个类名随机的 div，只装着广告链接；链接藏掉后把这层空壳也藏掉，免得留白。
-    const hideAdShells = (root) => {
-      if (!root.querySelectorAll) return;
-      root.querySelectorAll('a[rel~="nofollow"][href*="/out2/"] > img').forEach((img) => {
-        const shell = img.parentElement.parentElement;
-        if (shell && shell.tagName === 'DIV' && !shell.closest('footer')
-          && [...shell.children].every((c) => c.matches('a[rel~="nofollow"][href*="/out2/"]'))) shell.style.setProperty('display', 'none', 'important');
-      });
-    };
-    hideAdShells(document);
-    new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && hideAdShells(n.parentElement || n))))
-      .observe(document.body, { childList: true, subtree: true });
-    // 整页背景广告写在 body 的 style 属性里且带 !important（样式表压不过），并用 data-href 把 body 变成跳转链接。
-    const BG_PROPS = ['background', 'background-image', 'background-color', 'background-repeat', 'background-position', 'background-attachment', 'background-size'];
-    const cleanBody = () => {
-      const b = document.body;
-      if (b.hasAttribute('data-href')) b.removeAttribute('data-href');
-      if (BG_PROPS.some((p) => b.style.getPropertyValue(p))) BG_PROPS.forEach((p) => b.style.removeProperty(p));
-    };
-    cleanBody();
-    new MutationObserver(cleanBody).observe(document.body, { attributes: true, attributeFilter: ['data-href', 'style'] });
-  }
-
   walk(document.body);
 
   // 下拉菜单、侧栏、筛选器等由脚本动态插入或改写，用 MutationObserver 补译。
@@ -1026,4 +1061,7 @@
       requestAnimationFrame(flush);
     }
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
-})();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hltvZhMain, { once: true });
+else hltvZhMain();
