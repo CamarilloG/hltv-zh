@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name         HLTV 中文汉化 - HLTV.org 简体中文翻译（菜单 + 新闻论坛机翻）
-// @name:en      HLTV Chinese - Simplified Chinese translation for HLTV.org
+// @name         HLTV 中文汉化 + 去广告 - HLTV.org 简体中文翻译（菜单 + 新闻论坛机翻）
+// @name:en      HLTV Chinese + AdBlock - Simplified Chinese translation for HLTV.org
 // @namespace    https://github.com/CamarilloG/hltv-zh
-// @version      0.2.1
-// @description  HLTV.org 中文版：菜单、标签、按钮、地区国家、日期时间全部汉化，新闻标题、正文、论坛帖子用必应翻译自动机翻；战队、选手、赛事名与 CS2 术语（Major、IGL、VRS、Rating）保留英文，可在油猴菜单一键关闭机翻
-// @description:en Translate HLTV.org into Simplified Chinese: menus, tabs, countries, dates, plus Bing machine translation for news and forum posts. Team, player and event names and CS2 terms stay in English.
+// @version      0.3.0
+// @description  HLTV.org 中文版：菜单、标签、按钮、地区国家、日期时间全部汉化，新闻标题、正文、论坛帖子用必应翻译自动机翻；战队、选手、赛事名与 CS2 术语（Major、IGL、VRS、Rating）保留英文；顺带清除博彩广告、赔率、赞助横幅与导航「博彩」菜单。机翻与去广告都可在油猴菜单一键开关
+// @description:en Translate HLTV.org into Simplified Chinese: menus, tabs, countries, dates, plus Bing machine translation for news and forum posts. Team, player and event names and CS2 terms stay in English. Also removes betting ads, odds and sponsor banners.
 // @author       CamarilloG
 // @license      MIT
 // @homepageURL  https://github.com/CamarilloG/hltv-zh
@@ -957,6 +957,47 @@
     };
     pick(TRANSFER_SEL).forEach(handleTransfer);
     if (MT_ON && MT_AVAILABLE) pick(MT_TARGETS).forEach(mtEnqueue);
+  }
+
+  // —— 去广告：博彩广告框、侧边背景广告、赔率、赞助横幅与赞助外链、导航「博彩」菜单（页脚不动） ——
+  // 图片广告都是 <a rel="nofollow" href="/out2/…"><img></a>，外层 div 类名是随机串，所以按链接特征识别；
+  // 直播源、论坛外链直接指向目标站，不经过 /out2，不受影响。
+  const AD_ON = gmGet('adblock', true);
+  if (typeof GM_registerMenuCommand === 'function') {
+    GM_registerMenuCommand(`去广告：${AD_ON ? '已开启（点击关闭）' : '已关闭（点击开启）'}`, () => {
+      gmSet('adblock', !AD_ON);
+      location.reload();
+    });
+  }
+  if (AD_ON) {
+    // :has() 不能嵌套，规则要分开写：一条选择器不合法时浏览器会丢掉整条规则。
+    const AD_CSS = [
+      '.bg-sidebar', '.mobiletop.centered-placement',
+      '.yabo-firstcol-box', '.world-ranking-banner', '.presented-by-row',
+      '#betting', '.betting-section', '.match-fixtures',
+      'a[rel~="nofollow"][href*="/out2/"]:has(> img):not(footer *)',
+      '.navcon .nav-item:has(> a.nav-link[href*="/betting"])',
+    ];
+    const style = document.createElement('style');
+    style.textContent = AD_CSS.map((sel) => `${sel} { display: none !important; }`).join('\n')
+      + '\nbody { background-image: none !important; cursor: auto !important; }';
+    (document.head || document.documentElement).appendChild(style);
+    // 图片广告外层套着一个类名随机的 div，只装着广告链接；链接藏掉后把这层空壳也藏掉，免得留白。
+    const hideAdShells = (root) => {
+      if (!root.querySelectorAll) return;
+      root.querySelectorAll('a[rel~="nofollow"][href*="/out2/"] > img').forEach((img) => {
+        const shell = img.parentElement.parentElement;
+        if (shell && shell.tagName === 'DIV' && !shell.closest('footer')
+          && [...shell.children].every((c) => c.matches('a[rel~="nofollow"][href*="/out2/"]'))) shell.style.setProperty('display', 'none', 'important');
+      });
+    };
+    hideAdShells(document);
+    new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach((n) => n.nodeType === 1 && hideAdShells(n.parentElement || n))))
+      .observe(document.body, { childList: true, subtree: true });
+    // 整页背景广告会把 body 变成可点击的跳转链接。
+    const unlinkBody = () => document.body.removeAttribute('data-href');
+    unlinkBody();
+    new MutationObserver(unlinkBody).observe(document.body, { attributes: true, attributeFilter: ['data-href'] });
   }
 
   walk(document.body);

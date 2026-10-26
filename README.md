@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🔥 HLTV 终于有中文版了！一个油猴脚本，把 HLTV.org 整站翻成简体中文
+# 🔥 HLTV 终于有中文版了！一个油猴脚本，把 HLTV.org 整站翻成简体中文，还顺手干掉了博彩广告
 
-**看 CS2 新闻再也不用开翻译插件逐段复制 —— 装上就是中文 HLTV，菜单、新闻、论坛、比赛页全汉化**
+**看 CS2 新闻再也不用开翻译插件逐段复制 —— 装上就是中文、干净的 HLTV：菜单、新闻、论坛、比赛页全汉化，「立即捡钱」博彩广告和满屏赔率全部消失**
 
 [![Greasy Fork](https://img.shields.io/badge/Greasy%20Fork-一键安装-red?logo=greasyfork)](https://greasyfork.org/zh-CN/scripts/602378)
 [![Greasy Fork 安装量](https://img.shields.io/greasyfork/dt/602378?label=安装量)](https://greasyfork.org/zh-CN/scripts/602378)
@@ -36,6 +36,7 @@
 | 国家地区、日期、「3 days ago」 | 时好时坏 | ✅ 「3 天前」「2026 年 10 月 26 日」 |
 | 转会动态 | 语序别扭 | ✅ 「shalfey 从 ex-RUSTEC 转会至 GamerLegion」 |
 | 筛选器、下拉框 | ❌ 可能失灵 | ✅ 提交值不变，功能和原站一样 |
+| 博彩广告、赔率、赞助横幅 | ❌ 原样保留 | ✅ 一并清除，直播源链接不受影响 |
 | 不想要机翻时 | 关掉整个插件 | ✅ 油猴菜单一键关机翻，保留菜单汉化 |
 
 ## 📸 效果
@@ -66,9 +67,23 @@
 - **机器翻译（必应，自动）**：新闻标题和正文、论坛帖子、最新动态、战队页 AI 摘要与 FAQ、比赛页 BP 说明与评论、赛事页集锦描述
 - **不翻的**：战队名、选手 ID、赛事名、地图名，以及 HLTV、Major、MVP / EVP、Top 20、VRS、LAN、CS2、Rating、KAST、ADR、FACEIT、IGL、AWP、Bo3 等 CS 圈术语；页脚
 
+## 🚫 顺手去广告
+
+HLTV 上的博彩广告有多烦，用过的都知道。脚本默认帮你清掉：
+
+- 「今日赛事 … 立即捡钱」博彩广告框、两侧背景广告、页面里的各种图片横幅
+- 比赛页的赔率表与博彩公司列表、比赛列表里每场比赛旁的赔率
+- 侧栏「AWARD BY / RANKING BY」赞助行、排名页赞助横幅
+- 顶部导航的「博彩」菜单
+
+广告按「经 HLTV `/out2/` 跳转的图片链接」识别，不依赖 HLTV 随机生成的类名；直播源、论坛外链不经过 `/out2/`，不会被误伤。页脚不动。
+
 ## ⚙️ 设置
 
-油猴图标 → 「机器翻译：已开启（点击关闭）」。关掉之后只保留菜单、标签这类固定文字的汉化，新闻和论坛恢复英文原文。选择会被记住。
+油猴图标里有两个开关，选择都会被记住：
+
+- 「机器翻译：已开启（点击关闭）」：关掉之后只保留菜单、标签这类固定文字的汉化，新闻和论坛恢复英文原文。
+- 「去广告：已开启（点击关闭）」：关掉后广告和赔率恢复显示。
 
 ## 🔒 隐私说明
 
@@ -84,6 +99,8 @@
 
 **机翻突然不工作了？** 脚本用的是必应网页版翻译，必应改版可能导致失效。此时菜单汉化不受影响，欢迎 [提 Issue](https://github.com/CamarilloG/hltv-zh/issues)。
 
+**有广告没去干净，或者正常内容被藏了？** 欢迎提 Issue，附上页面链接。
+
 **发现漏译或翻错？** 欢迎提 Issue 或 PR，最好附上页面链接和截图。
 
 ## 🛠️ 实现原理（给想改的人）
@@ -91,13 +108,18 @@
 - 词表层：`DICT` 精确匹配 + `PATTERNS` 正则句式 + `CONTEXT` 按位置区分同词异义，`MutationObserver` 补译动态内容。
 - 机翻层：段落里的链接、图片换成占位符只翻文字，回填时原节点放回，所以链接和样式都不丢；CS 术语用 `{{…}}` 标记保护。
 - 下拉框：没有 `value` 的 `<option>` 先把英文写回 `value` 再改显示文字，提交给 HLTV 的值不变。
+- 去广告：一张 CSS 隐藏规则表 + 一个观察器处理广告外层的空壳 div。
+
+## 🙏 致谢
+
+去广告的思路参考了 [wolfcon/RIP-HLTV-BET](https://github.com/wolfcon/RIP-HLTV-BET)（MIT），本脚本按 2026 年的 HLTV 页面重新实现，未复制其代码。
 
 ## English
 
-**hltv-zh** is a userscript (Tampermonkey / Violentmonkey / ScriptCat) that translates [HLTV.org](https://www.hltv.org/) into Simplified Chinese. It translates menus, tabs, sidebars, countries and dates with a hand-made dictionary, and translates news articles and forum posts with Bing Translator. Team, player and event names and CS2 terms (Major, IGL, VRS, Rating, KAST, ADR…) stay in English. Machine translation can be turned off from the userscript menu.
+**hltv-zh** is a userscript (Tampermonkey / Violentmonkey / ScriptCat) that translates [HLTV.org](https://www.hltv.org/) into Simplified Chinese. It translates menus, tabs, sidebars, countries and dates with a hand-made dictionary, and translates news articles and forum posts with Bing Translator. Team, player and event names and CS2 terms (Major, IGL, VRS, Rating, KAST, ADR…) stay in English. It also removes betting ads, odds and sponsor banners. Machine translation and ad blocking can each be turned off from the userscript menu.
 
 ---
 
-关键词：HLTV 中文、HLTV 汉化、HLTV 中文版、HLTV 翻译、hltv.org 中文、HLTV 油猴脚本、CS2 新闻中文、CS2 资讯、CSGO 新闻翻译、Tampermonkey 脚本、HLTV Chinese translation、HLTV userscript
+关键词：HLTV 中文、HLTV 汉化、HLTV 去广告、HLTV 屏蔽博彩广告、HLTV 中文版、HLTV 翻译、hltv.org 中文、HLTV 油猴脚本、CS2 新闻中文、CS2 资讯、CSGO 新闻翻译、Tampermonkey 脚本、HLTV Chinese translation、HLTV userscript
 
-本项目与 HLTV.org 无关，仅在你的浏览器里改变页面显示文字。MIT License.
+本项目与 HLTV.org 无关，仅在你的浏览器里改变页面显示。MIT License.
